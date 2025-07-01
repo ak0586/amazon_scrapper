@@ -31,7 +31,7 @@ def home():
         "keyword": "Kurtas & Kurtis",
         "title": "ANNI DESIGNER Women’s Rayon Blend Kurta with Palazzo Set",
         "asin": "B0DMT61RSM",
-        "image":"https://m.media-amazon.com/images/I/51fz-fVBi6L._SY741_.jpg"
+        "image":"https://m.media-amazon.com/images/I/51fz-fVBi6L._SY741_.jpg",
         "price": "₹499.00",
         "url": "https://www.amazon.in/dp/B0DMT61RSM?tag=ak0586-21"
     })
