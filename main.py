@@ -40,7 +40,7 @@ def home():
         "message":
         "Amazon Scraper is live! Visit /scrape to get product data.",
         "keyword": "shoes",
-        ""products":products
+        "products": products
     }
 
 
