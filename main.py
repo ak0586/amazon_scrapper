@@ -8,22 +8,36 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"])
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
+    "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate, br",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept":
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Connection": "keep-alive",
 }
 
 ASSOCIATE_TAG = "ak0586-21"
 KEYWORDS = [
-    "shoes", "tshirt", "watch", "jeans", "kurti", "laptop",
-    "mobile", "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt"
+    "shoes", "tshirt", "watch", "jeans", "kurti", "laptop", "mobile",
+    "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt"
 ]
+
 
 @app.get("/")
 def home():
-    return {"message": "Amazon Scraper is live! Visit /scrape to get product data."}
+    return {
+        "message":
+        "Amazon Scraper is live! Visit /scrape to get product data.",
+        "keyword": "shoes",
+        "title": "Nike Air Zoom Pegasus 40 Running Shoes",
+        "asin": "B09X6XKZKZ",
+        "image":
+        "https://m.media-amazon.com/images/I/71fFq6vWZtL._AC_UL320_.jpg",
+        "price": "₹12,995.00",
+        "url": "https://www.amazon.in/dp/B09X6XKZKZ?tag=ak0586-21"
+    }
+
 
 @app.get("/scrape")
 def scrape_amazon(request: Request):
@@ -59,12 +73,18 @@ def scrape_amazon(request: Request):
                 continue
 
             products.append({
-                "keyword": keyword,
-                "title": title.text.strip(),
-                "asin": asin,
-                "image": image.get("src") or image.get("data-src"),
-                "price": f"₹{price_whole.text.strip()}.{price_frac.text.strip() if price_frac else '00'}",
-                "url": f"https://www.amazon.in/dp/{asin}?tag={ASSOCIATE_TAG}"
+                "keyword":
+                keyword,
+                "title":
+                title.text.strip(),
+                "asin":
+                asin,
+                "image":
+                image.get("src") or image.get("data-src"),
+                "price":
+                f"₹{price_whole.text.strip()}.{price_frac.text.strip() if price_frac else '00'}",
+                "url":
+                f"https://www.amazon.in/dp/{asin}?tag={ASSOCIATE_TAG}"
             })
 
             if len(products) >= 5:
