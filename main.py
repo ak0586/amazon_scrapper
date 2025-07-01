@@ -20,7 +20,7 @@ HEADERS = {
 ASSOCIATE_TAG = "ak0586-21"
 KEYWORDS = [
     "shoes", "tshirt", "watch", "jeans", "kurti", "laptop", "mobile",
-    "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt","Kurtas & Kurtis","wallet","belt",""
+    "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt","Kurtas & Kurtis","wallet","belt"
 ]
 
 
