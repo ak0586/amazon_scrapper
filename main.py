@@ -28,13 +28,12 @@ KEYWORDS = [
 def home():
     products=[]
     products.append({
-        "keyword": "shoes",
-        "title": "Nike Air Zoom Pegasus 40 Running Shoes",
-        "asin": "B09X6XKZKZ",
-        "image":
-        "https://m.media-amazon.com/images/I/71fFq6vWZtL._AC_UL320_.jpg",
-        "price": "₹12,995.00",
-        "url": "https://www.amazon.in/dp/B09X6XKZKZ?tag=ak0586-21"
+        "keyword": "Kurtas & Kurtis",
+        "title": "ANNI DESIGNER Women’s Rayon Blend Kurta with Palazzo Set",
+        "asin": "B0DMT61RSM",
+        "image":"https://m.media-amazon.com/images/I/51fz-fVBi6L._SY741_.jpg"
+        "price": "₹499.00",
+        "url": "https://www.amazon.in/dp/B0DMT61RSM?tag=ak0586-21"
     })
     return {
         "message":
