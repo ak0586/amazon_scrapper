@@ -26,9 +26,8 @@ KEYWORDS = [
 
 @app.get("/")
 def home():
-    return {
-        "message":
-        "Amazon Scraper is live! Visit /scrape to get product data.",
+    products=[]
+    products.append({
         "keyword": "shoes",
         "title": "Nike Air Zoom Pegasus 40 Running Shoes",
         "asin": "B09X6XKZKZ",
@@ -36,6 +35,12 @@ def home():
         "https://m.media-amazon.com/images/I/71fFq6vWZtL._AC_UL320_.jpg",
         "price": "₹12,995.00",
         "url": "https://www.amazon.in/dp/B09X6XKZKZ?tag=ak0586-21"
+    })
+    return {
+        "message":
+        "Amazon Scraper is live! Visit /scrape to get product data.",
+        "keyword": "shoes",
+        ""products":products
     }
 
 
