@@ -5,6 +5,7 @@ import requests
 import random
 import time
 import json
+import re
 from typing import List, Dict
 from urllib.parse import urlencode
 
@@ -134,6 +135,158 @@ def make_request_with_retry(url: str, max_retries: int = 3):
     
     return None
 
+def enhance_image_quality(image_url: str) -> str:
+    """Enhance image quality by modifying Amazon image URL parameters"""
+    if not image_url:
+        return image_url
+    
+    # Amazon image URL patterns and how to enhance them
+    # Remove size restrictions and quality limitations
+    enhanced_url = image_url
+    
+    # Replace common low-quality parameters with high-quality ones
+    replacements = [
+        # Remove size restrictions
+        ('._AC_UY218_', '._AC_UY1000_'),
+        ('._AC_UX218_', '._AC_UX1000_'),
+        ('._AC_UY200_', '._AC_UY1000_'),
+        ('._AC_UX200_', '._AC_UX1000_'),
+        ('._AC_UY400_', '._AC_UY1000_'),
+        ('._AC_UX400_', '._AC_UX1000_'),
+        ('._AC_UY500_', '._AC_UY1000_'),
+        ('._AC_UX500_', '._AC_UX1000_'),
+        # Remove quality restrictions
+        ('._SY160_', '._SY1000_'),
+        ('._SX160_', '._SX1000_'),
+        ('._SY200_', '._SY1000_'),
+        ('._SX200_', '._SX1000_'),
+        ('._SY300_', '._SY1000_'),
+        ('._SX300_', '._SX1000_'),
+        ('._SY400_', '._SY1000_'),
+        ('._SX400_', '._SX1000_'),
+        ('._SY500_', '._SY1000_'),
+        ('._SX500_', '._SX1000_'),
+        # Remove other size restrictions
+        ('._AC_SY200_', '._AC_SY1000_'),
+        ('._AC_SX200_', '._AC_SX1000_'),
+        ('._AC_SY400_', '._AC_SY1000_'),
+        ('._AC_SX400_', '._AC_SX1000_'),
+        ('._AC_SY500_', '._AC_SY1000_'),
+        ('._AC_SX500_', '._AC_SX1000_'),
+    ]
+    
+    for old_param, new_param in replacements:
+        enhanced_url = enhanced_url.replace(old_param, new_param)
+    
+    # If no size parameters found, try to add high-quality parameters
+    if '._AC_' not in enhanced_url and '._SY' not in enhanced_url and '._SX' not in enhanced_url:
+        # Try to insert high-quality parameters before file extension
+        if '.jpg' in enhanced_url:
+            enhanced_url = enhanced_url.replace('.jpg', '._AC_SY1000_.jpg')
+        elif '.jpeg' in enhanced_url:
+            enhanced_url = enhanced_url.replace('.jpeg', '._AC_SY1000_.jpeg')
+        elif '.png' in enhanced_url:
+            enhanced_url = enhanced_url.replace('.png', '._AC_SY1000_.png')
+    
+    return enhanced_url
+
+def get_product_images(asin: str) -> List[str]:
+    """Get all product images from Amazon product page"""
+    product_url = f"https://www.amazon.in/dp/{asin}"
+    
+    try:
+        print(f"Fetching product page for ASIN: {asin}")
+        response = make_request_with_retry(product_url)
+        
+        if not response:
+            print(f"Failed to fetch product page for ASIN: {asin}")
+            return []
+        
+        soup = BeautifulSoup(response.text, "html.parser")
+        images = []
+        
+        # Method 1: Extract from image gallery scripts
+        scripts = soup.find_all('script', type='text/javascript')
+        for script in scripts:
+            if script.string and 'ImageBlockATF' in script.string:
+                # Extract image URLs from JavaScript
+                image_matches = re.findall(r'"hiRes":"([^"]+)"', script.string)
+                for match in image_matches:
+                    # Decode the URL
+                    image_url = match.replace('\\u0026', '&').replace('\\/', '/')
+                    if image_url and image_url.startswith('http'):
+                        enhanced_url = enhance_image_quality(image_url)
+                        images.append(enhanced_url)
+        
+        # Method 2: Extract from colorImages data
+        for script in scripts:
+            if script.string and 'colorImages' in script.string:
+                # Extract from colorImages array
+                color_matches = re.findall(r'"large":"([^"]+)"', script.string)
+                for match in color_matches:
+                    image_url = match.replace('\\u0026', '&').replace('\\/', '/')
+                    if image_url and image_url.startswith('http'):
+                        enhanced_url = enhance_image_quality(image_url)
+                        if enhanced_url not in images:
+                            images.append(enhanced_url)
+        
+        # Method 3: Extract from img tags with specific classes
+        img_selectors = [
+            'img[data-old-hires]',
+            'img[data-a-hires]',
+            'img.a-dynamic-image',
+            '#landingImage',
+            '.a-dynamic-image',
+            '.image-wrapper img'
+        ]
+        
+        for selector in img_selectors:
+            img_elements = soup.select(selector)
+            for img in img_elements:
+                # Get high-resolution image URLs
+                hires_attrs = ['data-old-hires', 'data-a-hires', 'src', 'data-src']
+                for attr in hires_attrs:
+                    image_url = img.get(attr)
+                    if image_url and image_url.startswith('http'):
+                        enhanced_url = enhance_image_quality(image_url)
+                        if enhanced_url not in images:
+                            images.append(enhanced_url)
+        
+        # Method 4: Extract from JSON-LD structured data
+        json_scripts = soup.find_all('script', type='application/ld+json')
+        for script in json_scripts:
+            try:
+                data = json.loads(script.string)
+                if isinstance(data, dict) and 'image' in data:
+                    image_data = data['image']
+                    if isinstance(image_data, list):
+                        for img_url in image_data:
+                            if isinstance(img_url, str) and img_url.startswith('http'):
+                                enhanced_url = enhance_image_quality(img_url)
+                                if enhanced_url not in images:
+                                    images.append(enhanced_url)
+                    elif isinstance(image_data, str) and image_data.startswith('http'):
+                        enhanced_url = enhance_image_quality(image_data)
+                        if enhanced_url not in images:
+                            images.append(enhanced_url)
+            except json.JSONDecodeError:
+                continue
+        
+        # Remove duplicates while preserving order
+        unique_images = []
+        seen = set()
+        for img in images:
+            if img not in seen:
+                seen.add(img)
+                unique_images.append(img)
+        
+        print(f"Found {len(unique_images)} unique images for ASIN: {asin}")
+        return unique_images[:10]  # Limit to 10 images to avoid overwhelming
+        
+    except Exception as e:
+        print(f"Error fetching images for ASIN {asin}: {str(e)}")
+        return []
+
 def parse_products(soup, keyword: str) -> List[Dict]:
     """Parse products from Amazon search results"""
     products = []
@@ -180,20 +333,29 @@ def parse_products(soup, keyword: str) -> List[Dict]:
             if not title:
                 continue
             
-            # Try multiple image selectors
-            image_selectors = [
+            # Get thumbnail image from search results
+            thumbnail_selectors = [
                 "img",
                 ".s-image",
                 ".s-product-image img"
             ]
             
-            image_url = None
-            for selector in image_selectors:
+            thumbnail_image = None
+            for selector in thumbnail_selectors:
                 img_elem = item.select_one(selector)
                 if img_elem:
-                    image_url = img_elem.get("src") or img_elem.get("data-src")
-                    if image_url:
+                    thumbnail_image = img_elem.get("src") or img_elem.get("data-src")
+                    if thumbnail_image:
+                        thumbnail_image = enhance_image_quality(thumbnail_image)
                         break
+            
+            # Get all product images by visiting the product page
+            print(f"Getting all images for product: {title[:50]}...")
+            all_images = get_product_images(asin)
+            
+            # If no images found from product page, use thumbnail as fallback
+            if not all_images and thumbnail_image:
+                all_images = [thumbnail_image]
             
             # Try multiple price selectors
             price_selectors = [
@@ -224,7 +386,8 @@ def parse_products(soup, keyword: str) -> List[Dict]:
                     "keyword": keyword,
                     "title": title,
                     "asin": asin,
-                    "image": image_url,
+                    "images": all_images,  # Changed from single image to list of images
+                    "thumbnail": thumbnail_image,  # Keep thumbnail for quick preview
                     "price": price or "Price not available",
                     "url": f"https://www.amazon.in/dp/{asin}?tag={ASSOCIATE_TAG}"
                 })
@@ -245,12 +408,16 @@ def home():
         "keyword": "Kurtas & Kurtis",
         "title": "ANNI DESIGNER Women's Rayon Blend Kurta with Palazzo Set",
         "asin": "B0DMT61RSM",
-        "image": "https://m.media-amazon.com/images/I/51fz-fVBi6L._SY741_.jpg",
+        "images": [
+            "https://m.media-amazon.com/images/I/51fz-fVBi6L._AC_SY1000_.jpg",
+            "https://m.media-amazon.com/images/I/51fz-fVBi6L._AC_SY1000_.jpg"
+        ],
+        "thumbnail": "https://m.media-amazon.com/images/I/51fz-fVBi6L._AC_SY1000_.jpg",
         "price": "₹499.00",
         "url": "https://www.amazon.in/dp/B0DMT61RSM?tag=ak0586-21"
     })
     return {
-        "message": "Enhanced Amazon Scraper is live! Visit /scrape to get product data.",
+        "message": "Enhanced Amazon Scraper with High-Quality Multiple Images is live! Visit /scrape to get product data.",
         "keyword": "shoes",
         "products": products
     }
@@ -322,3 +489,13 @@ def test_headers():
     """Test endpoint to see what headers are being used"""
     headers = get_random_headers()
     return {"headers": headers}
+
+@app.get("/test-images/{asin}")
+def test_images(asin: str):
+    """Test endpoint to get all images for a specific ASIN"""
+    images = get_product_images(asin)
+    return {
+        "asin": asin,
+        "images": images,
+        "count": len(images)
+    }
