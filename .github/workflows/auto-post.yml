@@ -31,7 +31,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run the Auto Post Script
-        run: python auto_post.py
+        run: python3.11 auto-post.py
 
   retry-post:
     name: Retry After 10 Minutes if Failed
@@ -60,4 +60,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Retry Running the Script
-        run: python auto_post.py
+        run: python3.11 auto-post.py
