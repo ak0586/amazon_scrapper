@@ -10,25 +10,12 @@ FB_TOKEN = "EAANG2pObL1IBO7yheD2Dipi1CPJS180hBtAZC6ePLKRt9k1uvrbmLOuqDca4Jw96DEq
 TELEGRAM_BOT_TOKEN = "7331599173:AAGnoNDOTYZGx-C3y_MCu1rtGwosZsdm9tk"
 TELEGRAM_CHAT_ID = "2142558647"
 
-# === Wake up the Render server ===
-print("🚀 Triggering Render app to wake up...")
-try:
-    ping = requests.get(BASE_URL, timeout=10)
-    print(f"✅ Wake-up ping status: {ping.status_code}")
-except Exception as e:
-    print(f"⚠️ Wake-up ping failed: {e}")
+res = requests.get(SCRAPER_URL)
 
-# === Wait for 5 minutes ===
-print("⏳ Waiting 5 minutes for Render to fully wake up...")
-time.sleep(300)
-
-# === Now request the actual scraping ===
-print("🔍 Requesting scraped products...")
 try:
-    res = requests.get(SCRAPER_URL, timeout=10)
     data = res.json()
 except Exception as e:
-    print("❌ Failed to decode JSON from scraper.")
+    print("❌ Failed to decode JSON from scraper response.")
     print("Status Code:", res.status_code)
     print("Raw Text:", res.text)
     print("Error:", e)
