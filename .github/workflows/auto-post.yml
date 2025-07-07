@@ -2,13 +2,14 @@ name: Auto Post Amazon Product
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # Every 6 hours
+    - cron: '0 */4 * * *'  # Every 4 hours
   workflow_dispatch:
 
 jobs:
   post-product:
     name: Attempt Post
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # ✅ Kill the job if it runs more than 15 minutes
 
     steps:
       - uses: actions/checkout@v3
@@ -34,12 +35,15 @@ jobs:
         run: python3.11 auto-post.py
 
   retry-post:
-    name: Retry After 10 Minutes if Failed
+    name: Retry After Failure (Includes Timeout)
     runs-on: ubuntu-latest
     needs: post-product
     if: failure()
 
     steps:
+      - name: Wait 10 Minutes
+        run: sleep 600
+
       - uses: actions/checkout@v3
 
       - name: Setup Python
