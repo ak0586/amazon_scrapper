@@ -6,10 +6,25 @@ on:
   workflow_dispatch:
 
 jobs:
+
+  wake-api:
+    name: Wake Render App
+    runs-on: ubuntu-latest
+    outputs:
+      timestamp: ${{ steps.timestamp.outputs.now }}
+
+    steps:
+      - name: Trigger Render Wakeup
+        run: curl -s https://amazon-scrapper-api-f42g.onrender.com || true
+
+      - name: Save Timestamp
+        id: timestamp
+        run: echo "now=$(date +%s)" >> $GITHUB_OUTPUT
+
   post-product:
     name: Attempt Post
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # ✅ Kill the job if it runs more than 15 minutes
+    timeout-minutes: 5  # ✅ Kill the job if it runs more than 15 minutes
 
     steps:
       - uses: actions/checkout@v3
@@ -41,8 +56,8 @@ jobs:
     if: failure()
 
     steps:
-      - name: Wait 10 Minutes
-        run: sleep 600
+      - name: Wait 5 Minutes
+        run: sleep 300
 
       - uses: actions/checkout@v3
 
