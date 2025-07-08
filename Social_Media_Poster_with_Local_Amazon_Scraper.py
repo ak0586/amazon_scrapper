@@ -67,22 +67,6 @@ def load_keyword_tracker():
     return default_data
 
 
-def rate_limit():
-    """Implement rate limiting between requests"""
-    
-    # Initialize if not exists
-    if 'last_request_time' not in globals():
-        last_request_time = 0
-    
-    current_time = time.time()
-    time_since_last = current_time - last_request_time
-    
-    if time_since_last < MIN_DELAY:
-        sleep_time = MIN_DELAY - time_since_last + random.uniform(0.5, 2.0)
-        time.sleep(sleep_time)
-    
-    last_request_time = time.time()
-
 def save_keyword_tracker(data):
     """Save keyword tracking data to JSON file"""
     try:
@@ -115,6 +99,8 @@ def get_next_keyword():
     print(f"🔄 Next keyword will be: '{keywords[tracker_data['current_index']]}'")
     
     return selected_keyword
+last_request_time = 0
+MIN_DELAY = 2
 
 def get_random_headers():
     """Generate random headers for each request"""
@@ -141,7 +127,18 @@ def get_random_headers():
         ])
     }
 
-
+def rate_limit():
+    """Implement rate limiting between requests"""
+    global last_request_time
+    current_time = time.time()
+    time_since_last = current_time - last_request_time
+    
+    if time_since_last < MIN_DELAY:
+        sleep_time = MIN_DELAY - time_since_last + random.uniform(0.5, 2.0)
+        time.sleep(sleep_time)
+    
+    last_request_time = time.time()
+    
 def make_request_with_retry(url: str, max_retries: int = 3):
     """Make request with retry logic and different strategies"""
     for attempt in range(max_retries):
