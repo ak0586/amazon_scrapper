@@ -7,24 +7,10 @@ on:
 
 jobs:
 
-  wake-api:
-    name: Wake Render App
-    runs-on: ubuntu-latest
-    outputs:
-      timestamp: ${{ steps.timestamp.outputs.now }}
-
-    steps:
-      - name: Trigger Render Wakeup
-        run: curl -s https://amazon-scrapper-api-f42g.onrender.com || true
-
-      - name: Save Timestamp
-        id: timestamp
-        run: echo "now=$(date +%s)" >> $GITHUB_OUTPUT
-
   post-product:
     name: Attempt Post
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # ✅ Kill the job if it runs more than 15 minutes
+    timeout-minutes: 5  # ✅ Kill the job if it runs more than 5 minutes
 
     steps:
       - uses: actions/checkout@v3
@@ -47,7 +33,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run the Auto Post Script
-        run: python3.11 auto-post.py
+        run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
 
   retry-post:
     name: Retry After Failure (Includes Timeout)
@@ -79,4 +65,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Retry Running the Script
-        run: python3.11 auto-post.py
+        run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
