@@ -2,6 +2,7 @@
 """
 Social Media Poster with Local Amazon Scraper
 Posts Amazon products to Facebook and sends Telegram notifications
+Modified to select keywords serially using JSON file tracking
 """
 
 import requests
@@ -24,6 +25,9 @@ FB_TOKEN = "EAANG2pObL1IBO7yheD2Dipi1CPJS180hBtAZC6ePLKRt9k1uvrbmLOuqDca4Jw96DEq
 TELEGRAM_BOT_TOKEN = "7331599173:AAGnoNDOTYZGx-C3y_MCu1rtGwosZsdm9tk"
 TELEGRAM_CHAT_ID = "2142558647"
 
+# Keyword tracking file
+KEYWORD_TRACKER_FILE = "keyword_tracker.json"
+
 # === SCRAPER FUNCTIONS (copied from previous script) ===
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -43,6 +47,59 @@ KEYWORDS = [
 
 last_request_time = 0
 MIN_DELAY = 2
+
+def load_keyword_tracker():
+    """Load keyword tracking data from JSON file"""
+    if os.path.exists(KEYWORD_TRACKER_FILE):
+        try:
+            with open(KEYWORD_TRACKER_FILE, 'r') as f:
+                data = json.load(f)
+                return data
+        except (json.JSONDecodeError, FileNotFoundError):
+            print("⚠️ Keyword tracker file corrupted or not found. Creating new one.")
+    
+    # Create default tracker data
+    default_data = {
+        "current_index": 0,
+        "keywords": KEYWORDS,
+        "last_used": None,
+        "usage_count": 0
+    }
+    save_keyword_tracker(default_data)
+    return default_data
+
+def save_keyword_tracker(data):
+    """Save keyword tracking data to JSON file"""
+    try:
+        with open(KEYWORD_TRACKER_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        print(f"📝 Keyword tracker saved successfully")
+    except Exception as e:
+        print(f"⚠️ Failed to save keyword tracker: {str(e)}")
+
+def get_next_keyword():
+    """Get the next keyword in serial order"""
+    tracker_data = load_keyword_tracker()
+    
+    current_index = tracker_data["current_index"]
+    keywords = tracker_data["keywords"]
+    
+    # Get current keyword
+    selected_keyword = keywords[current_index]
+    
+    # Update tracker data
+    tracker_data["current_index"] = (current_index + 1) % len(keywords)
+    tracker_data["last_used"] = selected_keyword
+    tracker_data["usage_count"] += 1
+    
+    # Save updated data
+    save_keyword_tracker(tracker_data)
+    
+    print(f"🎯 Selected keyword: '{selected_keyword}' (Index: {current_index})")
+    print(f"📊 Total keywords used so far: {tracker_data['usage_count']}")
+    print(f"🔄 Next keyword will be: '{keywords[tracker_data['current_index']]}'")
+    
+    return selected_keyword
 
 def get_random_headers():
     """Generate random headers for each request"""
@@ -361,11 +418,8 @@ def parse_products(soup, keyword: str) -> List[Dict]:
     
     return products
 
-def scrape_amazon_products(keyword: str = None) -> Dict:
-    """Main scraping function"""
-    if not keyword:
-        keyword = random.choice(KEYWORDS)
-    
+def scrape_amazon_products(keyword: str) -> Dict:
+    """Main scraping function - now takes keyword as required parameter"""
     print(f"🔍 Scraping Amazon for: {keyword}")
     
     search_params = {
@@ -501,13 +555,38 @@ def send_telegram_notification(title: str, price: str, product_url: str) -> bool
         print("⚠️ Telegram message failed:", tg_response.text)
         return False
 
+def show_keyword_status():
+    """Show current keyword tracking status"""
+    print("\n=== KEYWORD TRACKING STATUS ===")
+    tracker_data = load_keyword_tracker()
+    
+    print(f"📊 Current Index: {tracker_data['current_index']}")
+    print(f"🎯 Next Keyword: '{tracker_data['keywords'][tracker_data['current_index']]}'")
+    print(f"📈 Total Usage Count: {tracker_data['usage_count']}")
+    print(f"🔄 Last Used: {tracker_data['last_used'] or 'None'}")
+    print(f"📝 Available Keywords: {len(tracker_data['keywords'])}")
+    
+    # Show all keywords with their indices
+    print("\n📋 All Keywords:")
+    for i, keyword in enumerate(tracker_data['keywords']):
+        marker = "→" if i == tracker_data['current_index'] else " "
+        print(f"  {marker} {i:2d}: {keyword}")
+    print()
+
 def main():
     """Main execution function"""
     print("🚀 Starting Amazon Product Social Media Poster...")
     
-    # Step 1: Scrape Amazon products
-    print("\n=== STEP 1: SCRAPING AMAZON ===")
-    data = scrape_amazon_products()
+    # Show current keyword status
+    show_keyword_status()
+    
+    # Step 1: Get next keyword in serial order
+    print("\n=== STEP 1: SELECTING KEYWORD ===")
+    keyword = get_next_keyword()
+    
+    # Step 2: Scrape Amazon products with selected keyword
+    print(f"\n=== STEP 2: SCRAPING AMAZON ===")
+    data = scrape_amazon_products(keyword)
     
     # Check for errors
     if "error" in data:
@@ -519,8 +598,8 @@ def main():
         print("❌ No products found.")
         sys.exit(1)
     
-    # Step 2: Select a random product
-    print(f"\n=== STEP 2: SELECTING PRODUCT ===")
+    # Step 3: Select a random product from the scraped results
+    print(f"\n=== STEP 3: SELECTING PRODUCT ===")
     product = random.choice(products)
     print(f"🎯 Selected product: {product['title'][:50]}...")
     
@@ -529,7 +608,6 @@ def main():
     title = product["title"]
     price = product["price"]
     product_url = product["url"]
-    keyword = product["keyword"]
     
     if not images:
         print("❌ No images found for selected product.")
@@ -537,7 +615,7 @@ def main():
     
     print(f"📷 Found {len(images)} images for the product")
     
-    # Step 3: Create caption
+    # Step 4: Create caption
     caption = f"""{title} - {keyword}
 
 💰 Price: {price}
@@ -545,20 +623,21 @@ def main():
 
 #fashion #amazonfinds #facebookpost #reelschallenge #women #shopnow #shoes #flipkart #style #deals #shopping #onlineshopping #{keyword.replace(' ', '')}"""
     
-    # Step 4: Upload to Facebook
-    print(f"\n=== STEP 3: UPLOADING TO FACEBOOK ===")
+    # Step 5: Upload to Facebook
+    print(f"\n=== STEP 4: UPLOADING TO FACEBOOK ===")
     facebook_success = upload_to_facebook(images, caption)
     
     if not facebook_success:
         print("❌ Facebook upload failed.")
         sys.exit(1)
     
-    # Step 5: Send Telegram notification
-    print(f"\n=== STEP 4: SENDING TELEGRAM NOTIFICATION ===")
+    # Step 6: Send Telegram notification
+    print(f"\n=== STEP 5: SENDING TELEGRAM NOTIFICATION ===")
     telegram_success = send_telegram_notification(title, price, product_url)
     
     # Final summary
     print(f"\n=== SUMMARY ===")
+    print(f"✅ Keyword: {keyword}")
     print(f"✅ Product: {title[:50]}...")
     print(f"✅ Price: {price}")
     print(f"✅ Images: {len(images)} uploaded")
