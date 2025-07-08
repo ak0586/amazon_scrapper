@@ -53,8 +53,7 @@ def load_keyword_tracker():
     
     # Create default tracker data with initial keywords
     default_keywords = [
-        "shoes", "tshirt", "watch", "jeans", "kurti", "laptop", "mobile",
-        "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt","Kurtas & Kurtis","wallet","belt"
+        "saree", "ghagra choli", "lancha lehanga set","dhoti kurta women","salwar suit","long skirt","dhoti pants women","anarkali suit","ethinic shrug","designer dupatta","plazzo suit","kurtas and churidar women","ladies sherwani","indo western suits women","sharara and garara suit"
     ]
     
     default_data = {
