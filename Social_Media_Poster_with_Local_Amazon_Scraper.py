@@ -3,6 +3,7 @@
 Social Media Poster with Local Amazon Scraper
 Posts Amazon products to Facebook and sends Telegram notifications
 Modified to select keywords serially using JSON file tracking
+Updated to select product with minimum price
 """
 
 import requests
@@ -11,12 +12,12 @@ import time
 import json
 import sys
 import os
+import re
 from typing import Dict, List
 
 # Import the scraper functions from the previous script
 # You can either copy the functions here or import them from a separate file
 from bs4 import BeautifulSoup
-import re
 from urllib.parse import urlencode
 
 # === CONFIG ===
@@ -40,14 +41,6 @@ USER_AGENTS = [
 
 PROXIES = []
 ASSOCIATE_TAG = "ak0586-21"
-KEYWORDS = [
-    "shoes", "tshirt", "watch", "jeans", "kurti", "laptop", "mobile",
-    "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt","Kurtas & Kurtis","wallet","belt"
-]
-
-last_request_time = 0
-MIN_DELAY = 2
-
 def load_keyword_tracker():
     """Load keyword tracking data from JSON file"""
     if os.path.exists(KEYWORD_TRACKER_FILE):
@@ -58,10 +51,15 @@ def load_keyword_tracker():
         except (json.JSONDecodeError, FileNotFoundError):
             print("⚠️ Keyword tracker file corrupted or not found. Creating new one.")
     
-    # Create default tracker data
+    # Create default tracker data with initial keywords
+    default_keywords = [
+        "shoes", "tshirt", "watch", "jeans", "kurti", "laptop", "mobile",
+        "sport shoes", "sandals", "sarees", "shirt", "Top & Tshirt","Kurtas & Kurtis","wallet","belt"
+    ]
+    
     default_data = {
         "current_index": 0,
-        "keywords": KEYWORDS,
+        "keywords": default_keywords,
         "last_used": None,
         "usage_count": 0
     }
@@ -311,6 +309,25 @@ def get_product_images(asin: str) -> List[str]:
         print(f"Error fetching images for ASIN {asin}: {str(e)}")
         return []
 
+def extract_price_value(price_str: str) -> float:
+    """Extract numeric price value from price string for comparison"""
+    if not price_str or price_str == "Price not available":
+        return float('inf')  # Return infinity for unavailable prices
+    
+    # Remove currency symbols and common characters
+    price_clean = re.sub(r'[₹,\s]', '', price_str)
+    
+    # Extract numbers (including decimals)
+    price_match = re.search(r'(\d+(?:\.\d+)?)', price_clean)
+    
+    if price_match:
+        try:
+            return float(price_match.group(1))
+        except ValueError:
+            return float('inf')
+    
+    return float('inf')
+
 def parse_products(soup, keyword: str) -> List[Dict]:
     """Parse products from Amazon search results"""
     products = []
@@ -399,6 +416,8 @@ def parse_products(soup, keyword: str) -> List[Dict]:
                     price = f"₹{price_whole.text.strip()}.{price_frac.text.strip() if price_frac else '00'}"
             
             if title and asin:
+                price_value = extract_price_value(price or "Price not available")
+                
                 products.append({
                     "keyword": keyword,
                     "title": title,
@@ -406,6 +425,7 @@ def parse_products(soup, keyword: str) -> List[Dict]:
                     "images": all_images,
                     "thumbnail": thumbnail_image,
                     "price": price or "Price not available",
+                    "price_value": price_value,  # Add numeric price for comparison
                     "url": f"https://www.amazon.in/dp/{asin}?tag={ASSOCIATE_TAG}"
                 })
                 
@@ -465,6 +485,32 @@ def scrape_amazon_products(keyword: str) -> Dict:
     except Exception as e:
         print(f"❌ Error scraping: {str(e)}")
         return {"error": f"Scraping failed: {str(e)}"}
+
+def select_minimum_price_product(products: List[Dict]) -> Dict:
+    """Select the product with minimum price from the list"""
+    if not products:
+        return None
+    
+    # Filter out products with no valid price
+    valid_products = [p for p in products if p.get('price_value', float('inf')) != float('inf')]
+    
+    if not valid_products:
+        print("⚠️ No products with valid prices found, selecting first product")
+        return products[0]
+    
+    # Find product with minimum price
+    min_price_product = min(valid_products, key=lambda x: x.get('price_value', float('inf')))
+    
+    print(f"💰 Selected product with minimum price: {min_price_product['price']}")
+    print(f"📦 Product: {min_price_product['title'][:50]}...")
+    
+    # Show price comparison
+    print("\n📊 Price comparison of scraped products:")
+    for i, product in enumerate(products, 1):
+        price_indicator = "⭐ SELECTED" if product == min_price_product else ""
+        print(f"  {i}. {product['price']} - {product['title'][:40]}... {price_indicator}")
+    
+    return min_price_product
 
 def upload_to_facebook(images: List[str], caption: str) -> bool:
     """Upload images to Facebook and create post"""
@@ -538,7 +584,7 @@ def send_telegram_notification(title: str, price: str, product_url: str) -> bool
 💰 {price}
 🔗 {product_url}
 
-#AmazonPost #AutoPosted"""
+#AmazonPost #AutoPosted #MinPrice"""
     
     tg_response = requests.get(
         f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
@@ -575,7 +621,7 @@ def show_keyword_status():
 
 def main():
     """Main execution function"""
-    print("🚀 Starting Amazon Product Social Media Poster...")
+    print("🚀 Starting Amazon Product Social Media Poster (Minimum Price Selection)...")
     
     # Show current keyword status
     show_keyword_status()
@@ -598,10 +644,13 @@ def main():
         print("❌ No products found.")
         sys.exit(1)
     
-    # Step 3: Select a random product from the scraped results
-    print(f"\n=== STEP 3: SELECTING PRODUCT ===")
-    product = random.choice(products)
-    print(f"🎯 Selected product: {product['title'][:50]}...")
+    # Step 3: Select the product with minimum price
+    print(f"\n=== STEP 3: SELECTING MINIMUM PRICE PRODUCT ===")
+    product = select_minimum_price_product(products)
+    
+    if not product:
+        print("❌ No suitable product found.")
+        sys.exit(1)
     
     # Get product details
     images = product.get("images", [])[:10]  # Limit to 10 images
@@ -621,7 +670,7 @@ def main():
 💰 Price: {price}
 🛒 Shop now 👉 {product_url}
 
-#fashion #amazonfinds #facebookpost #reelschallenge #women #shopnow #shoes #flipkart #style #deals #shopping #onlineshopping #{keyword.replace(' ', '')}"""
+#fashion #amazonfinds #facebookpost #reelschallenge #women #shopnow #shoes #flipkart #style #deals #shopping #onlineshopping #{keyword.replace(' ', '')} #bestprice #minprice"""
     
     # Step 5: Upload to Facebook
     print(f"\n=== STEP 4: UPLOADING TO FACEBOOK ===")
@@ -639,7 +688,7 @@ def main():
     print(f"\n=== SUMMARY ===")
     print(f"✅ Keyword: {keyword}")
     print(f"✅ Product: {title[:50]}...")
-    print(f"✅ Price: {price}")
+    print(f"✅ Price: {price} (Minimum among scraped products)")
     print(f"✅ Images: {len(images)} uploaded")
     print(f"✅ Facebook: {'Success' if facebook_success else 'Failed'}")
     print(f"✅ Telegram: {'Success' if telegram_success else 'Failed'}")
