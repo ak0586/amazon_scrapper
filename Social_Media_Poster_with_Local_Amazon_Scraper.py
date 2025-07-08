@@ -28,7 +28,8 @@ TELEGRAM_CHAT_ID = "2142558647"
 
 # Keyword tracking file
 KEYWORD_TRACKER_FILE = "keyword_tracker.json"
-
+last_request_time = 0
+MIN_DELAY = 1
 # === SCRAPER FUNCTIONS (copied from previous script) ===
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -68,7 +69,6 @@ def load_keyword_tracker():
 
 def rate_limit():
     """Implement rate limiting between requests"""
-    global last_request_time
     
     # Initialize if not exists
     if 'last_request_time' not in globals():
