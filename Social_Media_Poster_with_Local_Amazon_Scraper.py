@@ -21,6 +21,9 @@ import os
 import re
 import shutil # Import shutil for file operations
 from typing import Dict, List
+# Import the scraper functions from the previous script
+from bs4 import BeautifulSoup
+from urllib.parse import urlencode
 
 # === CONFIG ===
 FB_PAGE_ID = "104283058702700"
