@@ -6,6 +6,12 @@ Modified to select keywords serially using JSON file tracking
 Updated to select product with minimum price
 """
 
+#!/usr/bin/env python3
+"""
+Social Media Poster with Local Amazon Scraper
+Fixed version with proper JSON file handling and error reporting
+"""
+
 import requests
 import random
 import time
@@ -16,7 +22,6 @@ import re
 from typing import Dict, List
 
 # Import the scraper functions from the previous script
-# You can either copy the functions here or import them from a separate file
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode
 
@@ -30,11 +35,12 @@ TELEGRAM_CHAT_ID = "2142558647"
 KEYWORD_TRACKER_FILE = "keyword_tracker.json"
 last_request_time = 0
 MIN_DELAY = 1
-# === SCRAPER FUNCTIONS (copied from previous script) ===
+
+# === SCRAPER FUNCTIONS ===
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_5_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0 Safari/537.36"
@@ -42,19 +48,49 @@ USER_AGENTS = [
 
 PROXIES = []
 ASSOCIATE_TAG = "ak0586-21"
+
 def load_keyword_tracker():
-    """Load keyword tracking data from JSON file"""
-    if os.path.exists(KEYWORD_TRACKER_FILE):
-        try:
-            with open(KEYWORD_TRACKER_FILE, 'r') as f:
-                data = json.load(f)
-                return data
-        except (json.JSONDecodeError, FileNotFoundError):
-            print("⚠️ Keyword tracker file corrupted or not found. Creating new one.")
+    """Load keyword tracking data from JSON file with better error handling"""
+    print(f"📖 Loading keyword tracker from: {os.path.abspath(KEYWORD_TRACKER_FILE)}")
     
-    # Create default tracker data with initial keywords
+    # Check if file exists and is readable
+    if not os.path.exists(KEYWORD_TRACKER_FILE):
+        print("⚠️ Keyword tracker file not found. Creating new one.")
+        return create_default_tracker()
+    
+    # Check file permissions
+    if not os.access(KEYWORD_TRACKER_FILE, os.R_OK):
+        print("⚠️ Cannot read keyword tracker file. Check permissions.")
+        return create_default_tracker()
+    
+    try:
+        with open(KEYWORD_TRACKER_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        # Validate the structure
+        required_keys = ['current_index', 'keywords', 'last_used', 'usage_count']
+        if not all(key in data for key in required_keys):
+            print("⚠️ Invalid tracker file structure. Creating new one.")
+            return create_default_tracker()
+            
+        print(f"✅ Loaded tracker: index={data['current_index']}, usage_count={data['usage_count']}")
+        return data
+        
+    except json.JSONDecodeError as e:
+        print(f"⚠️ JSON decode error: {e}. Creating new tracker.")
+        return create_default_tracker()
+    except Exception as e:
+        print(f"⚠️ Error loading tracker: {e}. Creating new tracker.")
+        return create_default_tracker()
+
+def create_default_tracker():
+    """Create default tracker data"""
     default_keywords = [
-        "saree", "ghagra choli", "lancha lehanga set","dhoti kurta women","salwar suit","long skirt","dhoti pants women","anarkali suit","ethinic shrug","designer dupatta","plazzo suit","kurtas and churidar women","ladies sherwani","indo western suits women","sharara and garara suit"
+        "saree", "ghagra choli", "lancha lehanga set", "dhoti kurta women", 
+        "salwar suit", "long skirt", "dhoti pants women", "anarkali suit", 
+        "ethinic shrug", "designer dupatta", "plazzo suit", 
+        "kurtas and churidar women", "ladies sherwani", 
+        "indo western suits women", "sharara and garara suit"
     ]
     
     default_data = {
@@ -63,44 +99,127 @@ def load_keyword_tracker():
         "last_used": None,
         "usage_count": 0
     }
-    save_keyword_tracker(default_data)
+    
+    # Try to save the default data
+    if save_keyword_tracker(default_data):
+        print("✅ Created new default tracker file")
+    else:
+        print("⚠️ Failed to create tracker file, using in-memory data")
+    
     return default_data
 
-
 def save_keyword_tracker(data):
-    """Save keyword tracking data to JSON file"""
+    """Save keyword tracking data to JSON file with better error handling"""
     try:
-        with open(KEYWORD_TRACKER_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
-        print(f"📝 Keyword tracker saved successfully")
+        # Create backup of existing file
+        if os.path.exists(KEYWORD_TRACKER_FILE):
+            backup_file = f"{KEYWORD_TRACKER_FILE}.backup"
+            try:
+                import shutil
+                shutil.copy2(KEYWORD_TRACKER_FILE, backup_file)
+                print(f"📋 Created backup: {backup_file}")
+            except Exception as e:
+                print(f"⚠️ Could not create backup: {e}")
+        
+        # Check if directory is writable
+        dir_path = os.path.dirname(os.path.abspath(KEYWORD_TRACKER_FILE))
+        if not os.access(dir_path, os.W_OK):
+            print(f"⚠️ Directory not writable: {dir_path}")
+            return False
+            
+        # Write the file with explicit encoding and sync
+        with open(KEYWORD_TRACKER_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()  # Force write to disk
+            os.fsync(f.fileno())  # Ensure it's written to disk
+            
+        # Verify the file was written correctly
+        if os.path.exists(KEYWORD_TRACKER_FILE):
+            # Read it back to verify
+            with open(KEYWORD_TRACKER_FILE, 'r', encoding='utf-8') as f:
+                verify_data = json.load(f)
+                if verify_data == data:
+                    print(f"✅ Keyword tracker saved and verified successfully")
+                    return True
+                else:
+                    print("⚠️ Verification failed - data mismatch")
+                    return False
+        else:
+            print("⚠️ File not found after saving")
+            return False
+            
+    except PermissionError:
+        print(f"⚠️ Permission denied when saving to {KEYWORD_TRACKER_FILE}")
+        return False
     except Exception as e:
         print(f"⚠️ Failed to save keyword tracker: {str(e)}")
+        return False
 
 def get_next_keyword():
-    """Get the next keyword in serial order"""
+    """Get the next keyword in serial order with improved error handling"""
+    print("\n=== GETTING NEXT KEYWORD ===")
+    
+    # Load current tracker data
     tracker_data = load_keyword_tracker()
     
+    # Display current state
+    print(f"📊 Current state before update:")
+    print(f"  - Index: {tracker_data['current_index']}")
+    print(f"  - Last used: {tracker_data['last_used']}")
+    print(f"  - Usage count: {tracker_data['usage_count']}")
+    
+    # Get current keyword
     current_index = tracker_data["current_index"]
     keywords = tracker_data["keywords"]
     
-    # Get current keyword
+    if current_index >= len(keywords):
+        print(f"⚠️ Index {current_index} is out of range, resetting to 0")
+        current_index = 0
+    
     selected_keyword = keywords[current_index]
     
     # Update tracker data
-    tracker_data["current_index"] = (current_index + 1) % len(keywords)
+    new_index = (current_index + 1) % len(keywords)
+    tracker_data["current_index"] = new_index
     tracker_data["last_used"] = selected_keyword
     tracker_data["usage_count"] += 1
     
-    # Save updated data
-    save_keyword_tracker(tracker_data)
+    print(f"📝 Updating tracker:")
+    print(f"  - Selected keyword: '{selected_keyword}'")
+    print(f"  - New index: {new_index}")
+    print(f"  - New usage count: {tracker_data['usage_count']}")
     
-    print(f"🎯 Selected keyword: '{selected_keyword}' (Index: {current_index})")
-    print(f"📊 Total keywords used so far: {tracker_data['usage_count']}")
-    print(f"🔄 Next keyword will be: '{keywords[tracker_data['current_index']]}'")
+    # Save updated data with retry logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        if save_keyword_tracker(tracker_data):
+            print(f"✅ Successfully saved tracker on attempt {attempt + 1}")
+            break
+        else:
+            print(f"⚠️ Save attempt {attempt + 1} failed")
+            if attempt < max_retries - 1:
+                time.sleep(1)  # Wait before retry
+    else:
+        print(f"❌ Failed to save tracker after {max_retries} attempts")
+        print("⚠️ This may cause the same keyword to be used next time")
+    
+    # Show next keyword
+    next_keyword = keywords[new_index] if new_index < len(keywords) else "Unknown"
+    print(f"🔄 Next keyword will be: '{next_keyword}'")
     
     return selected_keyword
-last_request_time = 0
-MIN_DELAY = 2
+
+def rate_limit():
+    """Implement rate limiting between requests"""
+    global last_request_time
+    current_time = time.time()
+    time_since_last = current_time - last_request_time
+    
+    if time_since_last < MIN_DELAY:
+        sleep_time = MIN_DELAY - time_since_last + random.uniform(0.5, 2.0)
+        time.sleep(sleep_time)
+    
+    last_request_time = time.time()
 
 def get_random_headers():
     """Generate random headers for each request"""
@@ -127,18 +246,6 @@ def get_random_headers():
         ])
     }
 
-def rate_limit():
-    """Implement rate limiting between requests"""
-    global last_request_time
-    current_time = time.time()
-    time_since_last = current_time - last_request_time
-    
-    if time_since_last < MIN_DELAY:
-        sleep_time = MIN_DELAY - time_since_last + random.uniform(0.5, 2.0)
-        time.sleep(sleep_time)
-    
-    last_request_time = time.time()
-    
 def make_request_with_retry(url: str, max_retries: int = 3):
     """Make request with retry logic and different strategies"""
     for attempt in range(max_retries):
@@ -315,12 +422,9 @@ def get_product_images(asin: str) -> List[str]:
 def extract_price_value(price_str: str) -> float:
     """Extract numeric price value from price string for comparison"""
     if not price_str or price_str == "Price not available":
-        return float('inf')  # Return infinity for unavailable prices
+        return float('inf')
     
-    # Remove currency symbols and common characters
     price_clean = re.sub(r'[₹,\s]', '', price_str)
-    
-    # Extract numbers (including decimals)
     price_match = re.search(r'(\d+(?:\.\d+)?)', price_clean)
     
     if price_match:
@@ -428,7 +532,7 @@ def parse_products(soup, keyword: str) -> List[Dict]:
                     "images": all_images,
                     "thumbnail": thumbnail_image,
                     "price": price or "Price not available",
-                    "price_value": price_value,  # Add numeric price for comparison
+                    "price_value": price_value,
                     "url": f"https://www.amazon.in/dp/{asin}?tag={ASSOCIATE_TAG}"
                 })
                 
@@ -442,7 +546,7 @@ def parse_products(soup, keyword: str) -> List[Dict]:
     return products
 
 def scrape_amazon_products(keyword: str) -> Dict:
-    """Main scraping function - now takes keyword as required parameter"""
+    """Main scraping function"""
     print(f"🔍 Scraping Amazon for: {keyword}")
     
     search_params = {
@@ -494,20 +598,17 @@ def select_minimum_price_product(products: List[Dict]) -> Dict:
     if not products:
         return None
     
-    # Filter out products with no valid price
     valid_products = [p for p in products if p.get('price_value', float('inf')) != float('inf')]
     
     if not valid_products:
         print("⚠️ No products with valid prices found, selecting first product")
         return products[0]
     
-    # Find product with minimum price
     min_price_product = min(valid_products, key=lambda x: x.get('price_value', float('inf')))
     
     print(f"💰 Selected product with minimum price: {min_price_product['price']}")
     print(f"📦 Product: {min_price_product['title'][:50]}...")
     
-    # Show price comparison
     print("\n📊 Price comparison of scraped products:")
     for i, product in enumerate(products, 1):
         price_indicator = "⭐ SELECTED" if product == min_price_product else ""
@@ -519,7 +620,6 @@ def upload_to_facebook(images: List[str], caption: str) -> bool:
     """Upload images to Facebook and create post"""
     print(f"📱 Starting Facebook upload process...")
     
-    # Upload images to Facebook (unpublished)
     media_ids = []
     for i, image_url in enumerate(images, 1):
         print(f"📷 Uploading image {i}/{len(images)}: {image_url}")
@@ -542,10 +642,9 @@ def upload_to_facebook(images: List[str], caption: str) -> bool:
         if "id" in upload:
             media_ids.append({"media_fbid": upload["id"]})
             print(f"✅ Image {i} uploaded successfully")
-            time.sleep(2)  # gentle delay between uploads
+            time.sleep(2)
         else:
             print(f"⚠️ Failed to upload image {i}:", upload)
-            # Continue with other images instead of exiting
     
     if not media_ids:
         print("❌ No images uploaded successfully.")
@@ -553,7 +652,6 @@ def upload_to_facebook(images: List[str], caption: str) -> bool:
     
     print(f"📝 Creating Facebook post with {len(media_ids)} images...")
     
-    # Create Facebook post with all images
     post_response = requests.post(
         f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/feed",
         data={
@@ -603,7 +701,7 @@ def send_telegram_notification(title: str, price: str, product_url: str) -> bool
     else:
         print("⚠️ Telegram message failed:", tg_response.text)
         return False
-
+        
 def show_keyword_status():
     """Show current keyword tracking status"""
     print("\n=== KEYWORD TRACKING STATUS ===")
