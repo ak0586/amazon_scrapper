@@ -28,7 +28,7 @@ from urllib.parse import urlencode
 # === CONFIG ===
 FB_PAGE_ID = "104283058702700"
 FB_TOKEN = "EAANG2pObL1IBO7yheD2Dipi1CPJS180hBtAZC6ePLKRt9k1uvrbmLOuqDca4Jw96DEq7SvOzZAyUlry9n93p30G3T7LZCzxYih2PAwdTkMV9Rv8ZBOZCWEZAZA9lOmKxaVM5mlyPHG7KUF6U4qQO3mJJIOIcf4Yi5ZBnZAdUGthbYH2PZALTmc4O3SZBZAvpCXjGPEZBBhscZD"
-TELEGRAM_BOT_TOKEN = "7331599173:AAGnoNDOTYZGx-C3yM_Cu1rtGwosZsdm9tk"
+TELEGRAM_BOT_TOKEN = "7331599173:AAGnoNDOTYZGx-C3y_MCu1rtGwosZsdm9tk"
 TELEGRAM_CHAT_ID = "2142558647"
 
 # Keyword tracking file
@@ -705,6 +705,7 @@ def send_telegram_notification(title: str, price: str, product_url: str) -> bool
     else:
         print("⚠️ Telegram message failed:", tg_response.text)
         return False
+
         
 def show_keyword_status():
     """Show current keyword tracking status"""
