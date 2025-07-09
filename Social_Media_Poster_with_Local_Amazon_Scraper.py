@@ -19,16 +19,13 @@ import json
 import sys
 import os
 import re
+import shutil # Import shutil for file operations
 from typing import Dict, List
-
-# Import the scraper functions from the previous script
-from bs4 import BeautifulSoup
-from urllib.parse import urlencode
 
 # === CONFIG ===
 FB_PAGE_ID = "104283058702700"
 FB_TOKEN = "EAANG2pObL1IBO7yheD2Dipi1CPJS180hBtAZC6ePLKRt9k1uvrbmLOuqDca4Jw96DEq7SvOzZAyUlry9n93p30G3T7LZCzxYih2PAwdTkMV9Rv8ZBOZCWEZAZA9lOmKxaVM5mlyPHG7KUF6U4qQO3mJJIOIcf4Yi5ZBnZAdUGthbYH2PZALTmc4O3SZBZAvpCXjGPEZBBhscZD"
-TELEGRAM_BOT_TOKEN = "7331599173:AAGnoNDOTYZGx-C3y_MCu1rtGwosZsdm9tk"
+TELEGRAM_BOT_TOKEN = "7331599173:AAGnoNDOTYZGx-C3yM_Cu1rtGwosZsdm9tk"
 TELEGRAM_CHAT_ID = "2142558647"
 
 # Keyword tracking file
@@ -115,7 +112,6 @@ def save_keyword_tracker(data):
         if os.path.exists(KEYWORD_TRACKER_FILE):
             backup_file = f"{KEYWORD_TRACKER_FILE}.backup"
             try:
-                import shutil
                 shutil.copy2(KEYWORD_TRACKER_FILE, backup_file)
                 print(f"📋 Created backup: {backup_file}")
             except Exception as e:
@@ -128,11 +124,16 @@ def save_keyword_tracker(data):
             return False
             
         # Write the file with explicit encoding and sync
-        with open(KEYWORD_TRACKER_FILE, 'w', encoding='utf-8') as f:
+        # Use a temporary file to write, then rename to ensure atomicity
+        temp_file = f"{KEYWORD_TRACKER_FILE}.tmp"
+        with open(temp_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.flush()  # Force write to disk
             os.fsync(f.fileno())  # Ensure it's written to disk
-            
+        
+        # Atomically replace the old file with the new one
+        os.replace(temp_file, KEYWORD_TRACKER_FILE)
+
         # Verify the file was written correctly
         if os.path.exists(KEYWORD_TRACKER_FILE):
             # Read it back to verify
@@ -635,8 +636,8 @@ def upload_to_facebook(images: List[str], caption: str) -> bool:
         
         try:
             upload = upload_response.json()
-        except:
-            print(f"⚠️ Failed to parse upload response for image {i}")
+        except Exception as e:
+            print(f"⚠️ Failed to parse upload response for image {i}: {e}")
             continue
             
         if "id" in upload:
@@ -663,8 +664,8 @@ def upload_to_facebook(images: List[str], caption: str) -> bool:
     
     try:
         post = post_response.json()
-    except:
-        print("❌ Failed to parse post response")
+    except Exception as e:
+        print(f"❌ Failed to parse post response: {e}")
         return False
     
     if "id" in post:
