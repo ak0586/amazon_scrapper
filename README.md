@@ -2,7 +2,7 @@
 
 This Python-based automation script:
 
-* Scrapes Amazon India using either a **local scraper** or an **external API**
+* Scrapes Amazon India using either a **local scraper** 
 * Selects the product with the **lowest price** among scraped results
 * Uploads images to **Facebook Page**
 * Publishes a product post with caption and hashtags
@@ -18,7 +18,6 @@ This Python-based automation script:
 * ✅ Uploads up to 10 images to a Facebook Page
 * ✅ Notifies your Telegram bot with post details
 * ✅ Supports **backup**, **retry logic**, and **rate limiting**
-* ✅ Two scraper modes: `Local Scraper` or `External API Scraper`
 
 ---
 
@@ -47,6 +46,7 @@ TELEGRAM_CHAT_ID = "YOUR_TELEGRAM_CHAT_ID"
 ASSOCIATE_TAG = "YOUR_AMAZON_ASSOCIATE_TAG"
 SCRAPER_URL = "https://your-external-scraper.com/scrape"  # for API version
 ```
+You can watch tutorials on youtube to generate facebook access token, telegram bot token, telegram chat id,facebook page id.
 
 > 💡 You can generate Facebook access tokens from the [Meta Graph API Explorer](https://developers.facebook.com/tools/explorer/).
 
@@ -58,12 +58,6 @@ SCRAPER_URL = "https://your-external-scraper.com/scrape"  # for API version
 
 ```bash
 python3 amazon_poster.py
-```
-
-### Option 2: External Scraper (Faster setup)
-
-```bash
-python3 external_scraper_poster.py
 ```
 
 ---
@@ -122,17 +116,5 @@ pip install requests beautifulsoup4
 * This script is built for **educational and affiliate automation** purposes.
 * Avoid aggressive scraping to comply with Amazon's ToS.
 * Facebook and Telegram APIs require valid tokens and permissions.
-
----
-
-## 📄 License
-
-MIT License. Use at your own risk.
-
----
-
-## 🤛 Support
-
-For help or feature requests, open an issue or message on Telegram (if integrated).
 
 ---
