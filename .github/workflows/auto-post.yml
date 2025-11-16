@@ -33,10 +33,10 @@ jobs:
 
       - name: Run the Auto Post Script
         env:
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          FB_TOKEN: ${{ secrets.FB_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{secrets.TELEGRAM_CHAT_ID}}
+          TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+          FB_PAGE_ID: ${{secrets.FB_PAGE_ID}}
+          FB_TOKEN: ${{secrets.FB_TOKEN}}
         run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
 
       - name: Commit keyword_tracker.json if changed
