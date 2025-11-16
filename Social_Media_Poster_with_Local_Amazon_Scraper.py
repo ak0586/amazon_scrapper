@@ -608,9 +608,10 @@ def select_minimum_price_product(products: List[Dict]) -> Dict:
         print("⚠️ No products with valid prices found, selecting first product")
         return products[0]
     
-    min_price_product = min(valid_products, key=lambda x: x.get('price_value', float('inf')))
+    # min_price_product = min(valid_products, key=lambda x: x.get('price_value', float('inf')))
+    min_price_product = random.choice(valid_products)
     
-    print(f"💰 Selected product with minimum price: {min_price_product['price']}")
+    print(f"💰 Selected product randomly: {min_price_product['price']}")
     print(f"📦 Product: {min_price_product['title'][:50]}...")
     
     print("\n📊 Price comparison of scraped products:")
