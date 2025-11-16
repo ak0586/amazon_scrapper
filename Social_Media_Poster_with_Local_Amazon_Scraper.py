@@ -26,10 +26,10 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlencode
 
 # === CONFIG ===
-FB_PAGE_ID = os.getenv(FB_PAGE_ID)
-FB_TOKEN = os.getenv(FB_TOKEN)
-TELEGRAM_BOT_TOKEN = os.getenv(TELEGRAM_BOT_TOKEN)
-TELEGRAM_CHAT_ID = os.getenv(TELEGRAM_CHAT_ID)
+FB_PAGE_ID = os.getenv("FB_PAGE_ID")
+FB_TOKEN = os.getenv("FB_TOKEN")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Keyword tracking file
 KEYWORD_TRACKER_FILE = "keyword_tracker.json"
