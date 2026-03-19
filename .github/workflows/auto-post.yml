@@ -1,97 +1,97 @@
-name: Auto Post Amazon Product
+# name: Auto Post Amazon Product
 
-on:
-  schedule:
-    - cron: '0 */12 * * *'  # Every 8 hours
-  workflow_dispatch:
+# on:
+#   schedule:
+#     - cron: '0 */12 * * *'  # Every 8 hours
+#   workflow_dispatch:
 
-jobs:
-  post-product:
-    name: Attempt Post
-    runs-on: ubuntu-latest
-    timeout-minutes: 5  # Kill the job if it runs more than 5 minutes
+# jobs:
+#   post-product:
+#     name: Attempt Post
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 5  # Kill the job if it runs more than 5 minutes
 
-    steps:
-      - uses: actions/checkout@v3
+#     steps:
+#       - uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+#       - name: Setup Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.11'
 
-      - name: Set up pip cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+#       - name: Set up pip cache
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/.cache/pip
+#           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+#           restore-keys: |
+#             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+#       - name: Install dependencies
+#         run: |
+#           pip install -r requirements.txt
 
-      - name: Run the Auto Post Script
-        env:
-          TELEGRAM_CHAT_ID: ${{secrets.TELEGRAM_CHAT_ID}}
-          TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
-          FB_PAGE_ID: ${{secrets.FB_PAGE_ID}}
-          FB_TOKEN: ${{secrets.FB_TOKEN}}
-        run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
+#       - name: Run the Auto Post Script
+#         env:
+#           TELEGRAM_CHAT_ID: ${{secrets.TELEGRAM_CHAT_ID}}
+#           TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+#           FB_PAGE_ID: ${{secrets.FB_PAGE_ID}}
+#           FB_TOKEN: ${{secrets.FB_TOKEN}}
+#         run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
 
-      - name: Commit keyword_tracker.json if changed
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add keyword_tracker.json
-          git diff --cached --quiet || git commit -m "Update keyword_tracker.json [skip ci]"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       - name: Commit keyword_tracker.json if changed
+#         run: |
+#           git config --global user.name "github-actions"
+#           git config --global user.email "actions@github.com"
+#           git add keyword_tracker.json
+#           git diff --cached --quiet || git commit -m "Update keyword_tracker.json [skip ci]"
+#           git push
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  retry-post:
-    name: Retry After Failure (Includes Timeout)
-    runs-on: ubuntu-latest
-    needs: post-product
-    if: failure()
+#   retry-post:
+#     name: Retry After Failure (Includes Timeout)
+#     runs-on: ubuntu-latest
+#     needs: post-product
+#     if: failure()
 
-    steps:
-      - name: Wait 5 Minutes
-        run: sleep 300
+#     steps:
+#       - name: Wait 5 Minutes
+#         run: sleep 300
 
-      - uses: actions/checkout@v3
+#       - uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+#       - name: Setup Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.11'
 
-      - name: Restore pip cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+#       - name: Restore pip cache
+#         uses: actions/cache@v3
+#         with:
+#           path: ~/.cache/pip
+#           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+#           restore-keys: |
+#             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+#       - name: Install dependencies
+#         run: |
+#           pip install -r requirements.txt
 
-      - name: Retry Running the Script
-        env:
-          TELEGRAM_CHAT_ID: ${{secrets.TELEGRAM_CHAT_ID}}
-          TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
-          FB_PAGE_ID: ${{secrets.FB_PAGE_ID}}
-          FB_TOKEN: ${{secrets.FB_TOKEN}}
-        run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
+#       - name: Retry Running the Script
+#         env:
+#           TELEGRAM_CHAT_ID: ${{secrets.TELEGRAM_CHAT_ID}}
+#           TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+#           FB_PAGE_ID: ${{secrets.FB_PAGE_ID}}
+#           FB_TOKEN: ${{secrets.FB_TOKEN}}
+#         run: python3.11 Social_Media_Poster_with_Local_Amazon_Scraper.py
 
-      - name: Commit keyword_tracker.json if changed (Retry)
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add keyword_tracker.json
-          git diff --cached --quiet || git commit -m "Update keyword_tracker.json [skip ci]"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       - name: Commit keyword_tracker.json if changed (Retry)
+#         run: |
+#           git config --global user.name "github-actions"
+#           git config --global user.email "actions@github.com"
+#           git add keyword_tracker.json
+#           git diff --cached --quiet || git commit -m "Update keyword_tracker.json [skip ci]"
+#           git push
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
